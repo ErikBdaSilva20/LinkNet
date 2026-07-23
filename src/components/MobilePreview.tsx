@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { FONT_OPTIONS, getButtonRadius } from "@/hooks/useTheme";
 import { SocialIconsBarPreview } from "@/components/SocialIconsBar";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/data/types.gen";
 
 type BackgroundType = Database["public"]["Enums"]["background_type"];
 

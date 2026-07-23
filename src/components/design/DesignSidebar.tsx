@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
-import { 
-  Palette, 
-  Image, 
+import {
+  Image,
   Type, 
   ToggleLeft, 
   Droplet,

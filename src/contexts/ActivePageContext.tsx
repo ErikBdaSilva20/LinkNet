@@ -1,10 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import type { Tables } from "@/integrations/supabase/types";
-
-type Page = Tables<"pages">;
+import { useAuth } from "@/lib/auth";
+import { listPages, type Page } from "@/lib/data/pages.repo";
 
 interface ActivePageContextType {
   pageId: string | null;
@@ -12,7 +9,6 @@ interface ActivePageContextType {
   pages: Page[];
   isLoading: boolean;
   setActivePage: (pageId: string) => void;
-  profileId: string | null;
 }
 
 const ActivePageContext = createContext<ActivePageContextType | null>(null);
@@ -26,36 +22,11 @@ export function ActivePageProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem(STORAGE_KEY);
   });
 
-  // Fetch profile
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch all pages for user
+  // Fetch all pages do usuário logado (o gateway já só devolve as próprias — sem filtro extra)
   const { data: pages = [], isLoading } = useQuery({
-    queryKey: ["pages", profile?.id],
-    queryFn: async (): Promise<Page[]> => {
-      if (!profile?.id) return [];
-      const { data, error } = await supabase
-        .from("pages")
-        .select("*")
-        .eq("profile_id", profile.id)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!profile?.id,
+    queryKey: ["pages", user?.id],
+    queryFn: listPages,
+    enabled: !!user?.id,
   });
 
   // Find current page from pages list
@@ -90,7 +61,6 @@ export function ActivePageProvider({ children }: { children: ReactNode }) {
         pages,
         isLoading,
         setActivePage,
-        profileId: profile?.id || null,
       }}
     >
       {children}

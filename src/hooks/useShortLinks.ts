@@ -1,11 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useLinks } from "@/hooks/useLinks";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
+import {
+  listShortLinks,
+  createShortLink as createShortLinkRepo,
+  removeShortLink,
+  type ShortLink,
+} from "@/lib/data/short_links.repo";
+import { listLinkClicks } from "@/lib/data/link_clicks.repo";
+import { ApiError } from "@/lib/data/client";
 
-export type ShortLink = Tables<"short_links">;
+export type { ShortLink };
 
 export interface CreateShortLinkInput {
   slug?: string; // Optional - auto-generates if not provided
@@ -45,94 +51,70 @@ export function useShortLinks() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch user's short links
+  // list-then-filter: modo genérico não tem filtro server-side (§B5)
   const { data: shortLinks = [], isLoading } = useQuery({
     queryKey: ["short-links", pageId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ShortLink[]> => {
       if (!pageId) return [];
-      const { data, error } = await supabase
-        .from("short_links")
-        .select("*")
-        .eq("page_id", pageId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      const all = await listShortLinks();
+      return all
+        .filter((sl) => sl.page_id === pageId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
     enabled: !!pageId,
   });
 
-  // Count clicks per short link
   const { data: clickCounts = {} } = useQuery({
     queryKey: ["short-link-clicks", shortLinks.map((sl) => sl.id)],
-    queryFn: async () => {
+    queryFn: async (): Promise<Record<string, number>> => {
       if (shortLinks.length === 0) return {};
-      
-      const shortLinkIds = shortLinks.map((sl) => sl.id);
-      const { data, error } = await supabase
-        .from("link_clicks")
-        .select("short_link_id")
-        .in("short_link_id", shortLinkIds);
 
-      if (error) {
-        console.error("Error fetching click counts:", error);
-        return {};
-      }
+      const shortLinkIds = new Set(shortLinks.map((sl) => sl.id));
+      const allClicks = await listLinkClicks();
 
       const counts: Record<string, number> = {};
-      data?.forEach((c) => {
-        if (c.short_link_id) {
-          counts[c.short_link_id] = (counts[c.short_link_id] || 0) + 1;
-        }
-      });
+      allClicks
+        .filter((c) => c.short_link_id && shortLinkIds.has(c.short_link_id))
+        .forEach((c) => {
+          counts[c.short_link_id!] = (counts[c.short_link_id!] || 0) + 1;
+        });
       return counts;
     },
     enabled: shortLinks.length > 0,
   });
 
-  // Generate unique slug (checks for collisions)
+  // Gera um slug e confia na unique constraint do banco pra pegar colisão real (o modo
+  // genérico só devolve os short_links do próprio dono — não dá pra checar colisão global
+  // com outro usuário do mesmo tenant por list(); risco residual é desprezível: slug é
+  // base62 de 8 chars aleatório).
   const generateUniqueSlug = async (): Promise<string> => {
+    const ownSlugs = new Set(shortLinks.map((sl) => sl.slug));
     let attempts = 0;
     const maxAttempts = 5;
 
     while (attempts < maxAttempts) {
       const slug = generateBase62Slug(8);
-
-      // Check if slug already exists
-      const { data } = await supabase
-        .from("short_links")
-        .select("id")
-        .eq("slug", slug)
-        .single();
-
-      if (!data) {
-        return slug;
-      }
+      if (!ownSlugs.has(slug)) return slug;
       attempts++;
     }
 
-    // Fallback: add timestamp suffix
     return generateBase62Slug(6) + Date.now().toString(36).slice(-2);
   };
 
-  // Create short link mutation
   const createMutation = useMutation({
     mutationFn: async (input: CreateShortLinkInput) => {
       if (!pageId) throw new Error("Página não encontrada");
 
-      // Generate slug if not provided
       const slug = input.slug || (await generateUniqueSlug());
 
-      // Validate slug format
       if (!isValidSlug(slug)) {
         throw new Error("Slug inválido. Use 3-20 caracteres alfanuméricos ou hífen.");
       }
 
-      // Determine destination URL
       let destination_url = input.destination_url;
       if (input.link_id) {
         const link = links.find((l) => l.id === input.link_id);
-        if (link) {
+        if (link?.url) {
           destination_url = link.url;
         }
       }
@@ -141,20 +123,19 @@ export function useShortLinks() {
         throw new Error("URL de destino obrigatória");
       }
 
-      // Validate URL
       if (!isValidUrl(destination_url)) {
         throw new Error("URL inválida. Use http:// ou https://");
       }
 
-      const { error } = await supabase.from("short_links").insert({
-        page_id: pageId,
-        slug,
-        destination_url,
-        link_id: input.link_id || null,
-      });
-
-      if (error) {
-        if (error.code === "23505") {
+      try {
+        await createShortLinkRepo({
+          page_id: pageId,
+          slug,
+          destination_url,
+          link_id: input.link_id || null,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409) {
           throw new Error("Este slug já está em uso");
         }
         throw error;
@@ -173,11 +154,9 @@ export function useShortLinks() {
     },
   });
 
-  // Delete short link mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("short_links").delete().eq("id", id);
-      if (error) throw error;
+      await removeShortLink(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["short-links", pageId] });
@@ -192,7 +171,6 @@ export function useShortLinks() {
     },
   });
 
-  // Copy link to clipboard
   const copyToClipboard = async (slug: string) => {
     const fullUrl = `${window.location.origin}/l/${slug}`;
     try {

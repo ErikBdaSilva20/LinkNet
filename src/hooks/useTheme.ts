@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, Database } from "@/integrations/supabase/types";
+import { listThemes, createTheme, updateTheme, type Theme } from "@/lib/data/themes.repo";
+import { encodeImageToDataUrl } from "@/lib/image";
+import type { Database } from "@/lib/data/types.gen";
 
-type Theme = Tables<"themes">;
 type BackgroundType = Database["public"]["Enums"]["background_type"];
 
 export interface ThemePreset {
@@ -109,56 +109,37 @@ export function useTheme() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch theme
+  // list-then-find: modo genérico não tem filtro server-side (§B5)
   const { data: theme, isLoading } = useQuery({
     queryKey: ["theme", pageId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Theme | null> => {
       if (!pageId) return null;
-      
-      const { data, error } = await supabase
-        .from("themes")
-        .select("*")
-        .eq("page_id", pageId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
+      const all = await listThemes();
+      return all.find((t) => t.page_id === pageId) ?? null;
     },
     enabled: !!pageId,
   });
 
-  // Save theme (update existing)
   const saveMutation = useMutation({
     mutationFn: async (updates: ThemeUpdateInput) => {
       if (!pageId) throw new Error("Página não encontrada");
-      
+
       if (theme?.id) {
-        // Update existing theme
-        const { error } = await supabase
-          .from("themes")
-          .update(updates)
-          .eq("id", theme.id);
-        
-        if (error) throw error;
+        await updateTheme(theme.id, updates);
       } else {
-        // Insert new theme (should rarely happen as themes are created on user signup)
-        const { error } = await supabase
-          .from("themes")
-          .insert({ page_id: pageId, ...updates });
-        
-        if (error) throw error;
+        // Insert new theme (should rarely happen as themes are created on page creation)
+        await createTheme({ page_id: pageId, ...updates });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["theme", pageId] });
       toast({ title: "Tema salvo com sucesso!" });
     },
-    onError: (error) => {
-      console.error("Error saving theme:", error);
-      toast({ 
-        title: "Erro ao salvar tema", 
+    onError: () => {
+      toast({
+        title: "Erro ao salvar tema",
         description: "Tente novamente mais tarde.",
-        variant: "destructive" 
+        variant: "destructive",
       });
     },
   });
@@ -166,27 +147,22 @@ export function useTheme() {
   // Upload background image
   const uploadBackground = async (file: File): Promise<string | null> => {
     if (!pageId) return null;
-    
+
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${pageId}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("backgrounds")
-        .upload(fileName, file, { upsert: true });
-      
-      if (uploadError) throw uploadError;
-      
-      const { data } = supabase.storage
-        .from("backgrounds")
-        .getPublicUrl(fileName);
-      
-      return data.publicUrl;
+      const dataUrl = await encodeImageToDataUrl(file, { maxDim: 1080, quality: 0.7 });
+
+      if (theme?.id) {
+        await updateTheme(theme.id, { custom_background_url: dataUrl });
+      } else {
+        await createTheme({ page_id: pageId, custom_background_url: dataUrl });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["theme", pageId] });
+      return dataUrl;
     } catch (error) {
-      console.error("Error uploading background:", error);
       toast({
         title: "Erro ao fazer upload",
-        description: "Não foi possível enviar a imagem.",
+        description: error instanceof Error ? error.message : "Não foi possível enviar a imagem.",
         variant: "destructive",
       });
       return null;
@@ -204,7 +180,7 @@ export function useTheme() {
 
 // Helper to get font family CSS value
 export function getFontFamily(fontId: string): string {
-  return FONT_OPTIONS.find(f => f.id === fontId)?.family || FONT_OPTIONS[0].family;
+  return FONT_OPTIONS.find((f) => f.id === fontId)?.family || FONT_OPTIONS[0].family;
 }
 
 // Helper to get button radius based on style

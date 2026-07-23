@@ -44,7 +44,12 @@ export function SEOHead({ title, description, imageUrl, url }: SEOHeadProps) {
     const ogDesc = setMeta("og:description", description || "", true);
     if (ogDesc) createdElements.push(ogDesc);
 
-    const ogImage = setMeta("og:image", imageUrl || "", true);
+    // data: URI não é aceito por plataformas de preview social (esperam URL http(s)
+    // buscável separadamente) — omitir a tag em vez de publicar um valor garantidamente inútil.
+    const isDataUri = imageUrl?.startsWith("data:") ?? false;
+    const publicImageUrl = isDataUri ? "" : imageUrl || "";
+
+    const ogImage = setMeta("og:image", publicImageUrl, true);
     if (ogImage) createdElements.push(ogImage);
 
     const ogType = setMeta("og:type", "profile", true);
@@ -56,7 +61,7 @@ export function SEOHead({ title, description, imageUrl, url }: SEOHeadProps) {
     }
 
     // Twitter Card tags
-    const twitterCard = setMeta("twitter:card", imageUrl ? "summary_large_image" : "summary");
+    const twitterCard = setMeta("twitter:card", publicImageUrl ? "summary_large_image" : "summary");
     if (twitterCard) createdElements.push(twitterCard);
 
     const twitterTitle = setMeta("twitter:title", title);
@@ -65,8 +70,8 @@ export function SEOHead({ title, description, imageUrl, url }: SEOHeadProps) {
     const twitterDesc = setMeta("twitter:description", description || "");
     if (twitterDesc) createdElements.push(twitterDesc);
 
-    if (imageUrl) {
-      const twitterImage = setMeta("twitter:image", imageUrl);
+    if (publicImageUrl) {
+      const twitterImage = setMeta("twitter:image", publicImageUrl);
       if (twitterImage) createdElements.push(twitterImage);
     }
 

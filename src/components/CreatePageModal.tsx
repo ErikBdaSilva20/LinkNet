@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { usePages } from "@/hooks/usePages";
-import { useProfile } from "@/hooks/useProfile";
 import {
   Dialog,
   DialogContent,
@@ -20,51 +19,50 @@ interface CreatePageModalProps {
 }
 
 export function CreatePageModal({ open, onOpenChange }: CreatePageModalProps) {
-  const { createPageAsync, isCreating, isValidSlug } = usePages();
-  const { profile } = useProfile();
-  
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [slugError, setSlugError] = useState<string | null>(null);
+  const { createPageAsync, isCreating, isValidHandle } = usePages();
 
-  // Auto-generate slug from title
+  const [title, setTitle] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleError, setHandleError] = useState<string | null>(null);
+
+  // Auto-generate handle from title
   useEffect(() => {
     if (title) {
       const generated = title
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Remove accents
-        .replace(/[^a-z0-9]+/g, "-")     // Replace non-alphanumeric with hyphens
-        .replace(/^-|-$/g, "")           // Remove leading/trailing hyphens
-        .slice(0, 30);
-      setSlug(generated);
+        .replace(/\p{Diacritic}/gu, "") // Remove accents
+        .replace(/[^a-z0-9]+/g, "_")     // Replace non-alphanumeric with underscore
+        .replace(/^_|_$/g, "")           // Remove leading/trailing underscore
+        .slice(0, 20);
+      setHandle(generated);
     }
   }, [title]);
 
-  // Validate slug on change
+  // Validate handle on change
   useEffect(() => {
-    if (slug) {
-      if (!isValidSlug(slug)) {
-        setSlugError("Use apenas letras minúsculas, números e hífens (3-30 caracteres)");
+    if (handle) {
+      if (!isValidHandle(handle)) {
+        setHandleError("Use apenas letras minúsculas, números e _ (3-20 caracteres)");
       } else {
-        setSlugError(null);
+        setHandleError(null);
       }
     } else {
-      setSlugError(null);
+      setHandleError(null);
     }
-  }, [slug, isValidSlug]);
+  }, [handle, isValidHandle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title.trim() || !slug.trim()) return;
-    if (slugError) return;
+
+    if (!title.trim() || !handle.trim()) return;
+    if (handleError) return;
 
     try {
-      await createPageAsync({ title: title.trim(), slug: slug.trim() });
+      await createPageAsync({ title: title.trim(), handle: handle.trim() });
       onOpenChange(false);
       setTitle("");
-      setSlug("");
+      setHandle("");
     } catch {
       // Error handled by mutation
     }
@@ -73,13 +71,11 @@ export function CreatePageModal({ open, onOpenChange }: CreatePageModalProps) {
   const handleClose = () => {
     onOpenChange(false);
     setTitle("");
-    setSlug("");
-    setSlugError(null);
+    setHandle("");
+    setHandleError(null);
   };
 
-  const previewUrl = profile?.handle 
-    ? `/${profile.handle}/${slug || "..."}`
-    : `/${slug || "..."}`;
+  const previewUrl = `/${handle || "..."}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -104,18 +100,18 @@ export function CreatePageModal({ open, onOpenChange }: CreatePageModalProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">
+            <Label htmlFor="handle">
               URL da Página
             </Label>
             <Input
-              id="slug"
+              id="handle"
               placeholder="portfolio"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              className={slugError ? "border-destructive" : ""}
+              value={handle}
+              onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+              className={handleError ? "border-destructive" : ""}
             />
-            {slugError ? (
-              <p className="text-xs text-destructive">{slugError}</p>
+            {handleError ? (
+              <p className="text-xs text-destructive">{handleError}</p>
             ) : (
               <p className="text-xs text-muted-foreground">
                 Sua página será acessível em{" "}
@@ -135,7 +131,7 @@ export function CreatePageModal({ open, onOpenChange }: CreatePageModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={!title.trim() || !slug.trim() || !!slugError || isCreating}
+              disabled={!title.trim() || !handle.trim() || !!handleError || isCreating}
             >
               {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Criar Página

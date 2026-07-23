@@ -1,46 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useToast } from "@/hooks/use-toast";
+import { listLeads, removeLead, type Lead } from "@/lib/data/leads.repo";
 
 export function useLeads() {
   const { pageId } = useActivePage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch leads
+  // list-then-filter: modo genérico não tem filtro server-side (§B5)
   const { data: leads, isLoading, error } = useQuery({
     queryKey: ["leads", pageId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Lead[]> => {
       if (!pageId) return [];
-      
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .eq("page_id", pageId)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
+      const all = await listLeads();
+      return all
+        .filter((l) => l.page_id === pageId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
     enabled: !!pageId,
   });
 
-  // Delete lead
   const deleteMutation = useMutation({
     mutationFn: async (leadId: string) => {
-      const { error } = await supabase
-        .from("leads")
-        .delete()
-        .eq("id", leadId);
-      
-      if (error) throw error;
+      await removeLead(leadId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads", pageId] });
       toast({ title: "Lead removido" });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao remover lead",
         description: error.message,
@@ -58,24 +47,20 @@ export function useLeads() {
 
     // Collect all custom field keys across leads
     const customFieldKeys = new Set<string>();
-    leads.forEach(l => {
-      const cf = (l as typeof l & { custom_fields?: Record<string, string> }).custom_fields;
-      if (cf && typeof cf === "object") {
-        Object.keys(cf).forEach(k => customFieldKeys.add(k));
-      }
+    leads.forEach((l) => {
+      Object.keys(l.custom_fields || {}).forEach((k) => customFieldKeys.add(k));
     });
     const customKeys = Array.from(customFieldKeys);
 
     const headers = ["Nome", "Email", "Telefone", ...customKeys, "Data de Cadastro"];
-    const rows = leads.map(l => {
-      const cf = (l as typeof l & { custom_fields?: Record<string, string> }).custom_fields || {};
-      const phone = (l as typeof l & { phone?: string }).phone || "";
+    const rows = leads.map((l) => {
+      const cf = l.custom_fields || {};
       const email = l.email?.includes("@placeholder.local") ? "" : l.email;
       return [
         l.name || "",
         email,
-        phone,
-        ...customKeys.map(k => (cf as Record<string, string>)[k] || ""),
+        l.phone || "",
+        ...customKeys.map((k) => cf[k] || ""),
         new Date(l.created_at).toLocaleString("pt-BR"),
       ];
     });
@@ -87,11 +72,9 @@ export function useLeads() {
       return value;
     };
 
-    const csv = [headers, ...rows]
-      .map(row => row.map(escapeCSV).join(","))
-      .join("\n");
+    const csv = [headers, ...rows].map((row) => row.map(escapeCSV).join(",")).join("\n");
 
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

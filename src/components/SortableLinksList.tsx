@@ -21,7 +21,6 @@ import { GlassCard } from "@/components/GlassCard";
 import { DynamicIcon } from "@/components/IconSelector";
 import { GripVertical, ExternalLink, Star } from "lucide-react";
 import type { Link } from "@/hooks/useLinks";
-import { cn } from "@/lib/utils";
 
 interface SortableLinksListProps {
   links: Link[];

@@ -175,9 +175,6 @@ const ICON_CATEGORIES: Record<string, string[]> = {
   "Outros": ["MapPin", "Rss", "Zap", "Award", "Coffee", "User", "Share2"],
 };
 
-// All icon names flattened for search
-const ALL_ICONS = Object.values(ICON_CATEGORIES).flat();
-
 interface IconSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

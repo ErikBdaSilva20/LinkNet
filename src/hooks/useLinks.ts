@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useToast } from "./use-toast";
-import type { Tables, Enums } from "@/integrations/supabase/types";
+import { listLinks, createLink as createLinkRepo, updateLink as updateLinkRepo, removeLink } from "@/lib/data/links.repo";
+import { listLinkClicks } from "@/lib/data/link_clicks.repo";
+import { encodeImageToDataUrl } from "@/lib/image";
+import type { Link } from "@/lib/data/links.repo";
+import type { Enums } from "@/lib/data/types.gen";
 
-export type Link = Tables<"links">;
+export type { Link };
 type ThumbnailType = Enums<"thumbnail_type">;
 
 export type LinkType = "link" | "header";
@@ -41,45 +44,33 @@ export function useLinks() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch links for user's page
+  // list-then-filter: modo genérico não tem filtro server-side (§B5)
   const { data: links = [], isLoading, error } = useQuery({
     queryKey: ["links", pageId],
     queryFn: async (): Promise<Link[]> => {
       if (!pageId) return [];
-
-      const { data, error } = await supabase
-        .from("links")
-        .select("*")
-        .eq("page_id", pageId)
-        .order("position", { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      const all = await listLinks();
+      return all
+        .filter((l) => l.page_id === pageId)
+        .sort((a, b) => a.position - b.position);
     },
     enabled: !!pageId,
   });
 
-  // Get click counts for links
   const { data: clickCounts = {} } = useQuery({
     queryKey: ["link-clicks", pageId],
     queryFn: async (): Promise<Record<string, number>> => {
-      if (!pageId) return {};
+      if (!pageId || links.length === 0) return {};
 
-      const linkIds = links.map((l) => l.id);
-      if (linkIds.length === 0) return {};
+      const linkIds = new Set(links.map((l) => l.id));
+      const allClicks = await listLinkClicks();
 
-      const { data, error } = await supabase
-        .from("link_clicks")
-        .select("link_id")
-        .in("link_id", linkIds);
-
-      if (error) throw error;
-
-      // Count clicks per link
       const counts: Record<string, number> = {};
-      data?.forEach((click) => {
-        counts[click.link_id] = (counts[click.link_id] || 0) + 1;
-      });
+      allClicks
+        .filter((click) => linkIds.has(click.link_id))
+        .forEach((click) => {
+          counts[click.link_id] = (counts[click.link_id] || 0) + 1;
+        });
       return counts;
     },
     enabled: !!pageId && links.length > 0,
@@ -90,23 +81,12 @@ export function useLinks() {
     mutationFn: async (input: CreateLinkInput) => {
       if (!pageId) throw new Error("Página não encontrada");
 
-      // First, shift all existing links down by 1 position
-      if (links.length > 0) {
-        const updates = links.map((link) => ({
-          id: link.id,
-          position: link.position + 1,
-        }));
-
-        for (const update of updates) {
-          await supabase
-            .from("links")
-            .update({ position: update.position })
-            .eq("id", update.id);
-        }
+      // Shift all existing links down by 1 position (loop sequencial — sem batch no modo genérico)
+      for (const link of links) {
+        await updateLinkRepo(link.id, { position: link.position + 1 });
       }
 
-      // Insert new link at position 0 (top)
-      const { error } = await supabase.from("links").insert({
+      await createLinkRepo({
         page_id: pageId,
         title: input.title,
         url: input.url || null,
@@ -119,14 +99,12 @@ export function useLinks() {
         ends_at: input.ends_at,
         position: 0,
       });
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["links", pageId] });
       toast({ title: "Link criado", description: "Seu link foi adicionado no topo da lista." });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erro ao criar link", description: error.message });
     },
   });
@@ -135,22 +113,12 @@ export function useLinks() {
   const updateLinkMutation = useMutation({
     mutationFn: async (input: UpdateLinkInput) => {
       const { id, ...updates } = input;
-      
-      const { error } = await supabase
-        .from("links")
-        .update(updates)
-        .eq("id", id);
-
-      if (error) throw error;
+      await updateLinkRepo(id, updates);
     },
     onMutate: async (input: UpdateLinkInput) => {
-      // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: ["links", pageId] });
-
-      // Snapshot previous value
       const previousLinks = queryClient.getQueryData<Link[]>(["links", pageId]);
 
-      // Optimistically update
       if (previousLinks) {
         const updatedLinks = previousLinks.map((link) =>
           link.id === input.id ? { ...link, ...input } : link
@@ -160,8 +128,7 @@ export function useLinks() {
 
       return { previousLinks };
     },
-    onError: (error, _, context) => {
-      // Rollback on error
+    onError: (error: Error, _, context) => {
       if (context?.previousLinks) {
         queryClient.setQueryData(["links", pageId], context.previousLinks);
       }
@@ -175,14 +142,13 @@ export function useLinks() {
   // Delete link
   const deleteLinkMutation = useMutation({
     mutationFn: async (linkId: string) => {
-      const { error } = await supabase.from("links").delete().eq("id", linkId);
-      if (error) throw error;
+      await removeLink(linkId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["links", pageId] });
       toast({ title: "Link excluído", description: "O link foi removido." });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erro ao excluir", description: error.message });
     },
   });
@@ -190,28 +156,16 @@ export function useLinks() {
   // Reorder links with optimistic UI
   const reorderLinksMutation = useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => ({
-        id,
-        position: index,
-      }));
-
-      // Update each link's position
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("links")
-          .update({ position: update.position })
-          .eq("id", update.id);
-        if (error) throw error;
+      let index = 0;
+      for (const id of orderedIds) {
+        await updateLinkRepo(id, { position: index });
+        index += 1;
       }
     },
     onMutate: async (orderedIds: string[]) => {
-      // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: ["links", pageId] });
-
-      // Snapshot previous value
       const previousLinks = queryClient.getQueryData<Link[]>(["links", pageId]);
 
-      // Optimistically update
       if (previousLinks) {
         const reorderedLinks = orderedIds.map((id, index) => {
           const link = previousLinks.find((l) => l.id === id)!;
@@ -222,8 +176,7 @@ export function useLinks() {
 
       return { previousLinks };
     },
-    onError: (error, _, context) => {
-      // Rollback on error
+    onError: (error: Error, _, context) => {
       if (context?.previousLinks) {
         queryClient.setQueryData(["links", pageId], context.previousLinks);
       }
@@ -236,29 +189,19 @@ export function useLinks() {
 
   // Upload thumbnail
   const uploadThumbnail = async (linkId: string, file: File): Promise<string | null> => {
-    if (!pageId) return null;
-
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${pageId}/${linkId}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("thumbnails")
-      .upload(fileName, file, { upsert: true });
-
-    if (uploadError) {
+    try {
+      const dataUrl = await encodeImageToDataUrl(file, { maxDim: 128 });
+      await updateLinkRepo(linkId, { thumbnail_url: dataUrl });
+      queryClient.invalidateQueries({ queryKey: ["links", pageId] });
+      return dataUrl;
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erro no upload",
-        description: uploadError.message,
+        description: error instanceof Error ? error.message : "Não foi possível processar a imagem.",
       });
       return null;
     }
-
-    const { data: publicUrl } = supabase.storage
-      .from("thumbnails")
-      .getPublicUrl(fileName);
-
-    return publicUrl.publicUrl;
   };
 
   return {

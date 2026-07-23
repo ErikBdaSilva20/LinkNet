@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useToast } from "@/hooks/use-toast";
+import {
+  listIntegrations,
+  createIntegration,
+  updateIntegration,
+  type Integration,
+} from "@/lib/data/integrations.repo";
 
 // Validation regex patterns
 export const GA_REGEX = /^G-[A-Z0-9]{6,}$/;
@@ -18,22 +23,11 @@ export const isValidPixelId = (id: string): boolean => {
   return PIXEL_REGEX.test(id);
 };
 
-export interface IntegrationsData {
-  id: string;
-  page_id: string;
-  google_analytics_measurement_id: string | null;
-  meta_pixel_id: string | null;
-  custom_head_html: string | null;
-  utm_source: string | null;
-  utm_medium: string | null;
-  utm_campaign: string | null;
-  updated_at: string;
-}
+export type IntegrationsData = Integration;
 
 export interface IntegrationsUpdateInput {
   google_analytics_measurement_id?: string | null;
   meta_pixel_id?: string | null;
-  custom_head_html?: string | null;
   utm_source?: string | null;
   utm_medium?: string | null;
   utm_campaign?: string | null;
@@ -44,73 +38,48 @@ export function useIntegrations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch integrations
+  // list-then-find: modo genérico não tem filtro server-side (§B5)
   const {
     data: integrations,
     isLoading,
     error,
   } = useQuery({
     queryKey: ["integrations", pageId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Integration | null> => {
       if (!pageId) return null;
-
-      const { data, error } = await supabase
-        .from("integrations")
-        .select("*")
-        .eq("page_id", pageId)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as IntegrationsData | null;
+      const all = await listIntegrations();
+      return all.find((i) => i.page_id === pageId) ?? null;
     },
     enabled: !!pageId,
   });
 
-  // Save integrations mutation (upsert)
   const saveMutation = useMutation({
     mutationFn: async (updates: IntegrationsUpdateInput) => {
       if (!pageId) throw new Error("Página não encontrada");
 
-      // Clean up empty strings to null
       const cleanedUpdates: IntegrationsUpdateInput = {
         google_analytics_measurement_id: updates.google_analytics_measurement_id?.trim() || null,
         meta_pixel_id: updates.meta_pixel_id?.trim() || null,
-        custom_head_html: updates.custom_head_html?.trim() || null,
         utm_source: updates.utm_source?.trim() || null,
         utm_medium: updates.utm_medium?.trim() || null,
         utm_campaign: updates.utm_campaign?.trim() || null,
       };
 
-      // Validate GA ID if provided
-      if (cleanedUpdates.google_analytics_measurement_id && 
-          !isValidGaId(cleanedUpdates.google_analytics_measurement_id)) {
+      if (
+        cleanedUpdates.google_analytics_measurement_id &&
+        !isValidGaId(cleanedUpdates.google_analytics_measurement_id)
+      ) {
         throw new Error("ID do Google Analytics inválido");
       }
 
-      // Validate Pixel ID if provided
-      if (cleanedUpdates.meta_pixel_id && 
-          !isValidPixelId(cleanedUpdates.meta_pixel_id)) {
+      if (cleanedUpdates.meta_pixel_id && !isValidPixelId(cleanedUpdates.meta_pixel_id)) {
         throw new Error("ID do Meta Pixel inválido");
       }
 
       if (integrations?.id) {
-        // Update existing record
-        const { error } = await supabase
-          .from("integrations")
-          .update(cleanedUpdates)
-          .eq("id", integrations.id);
-
-        if (error) throw error;
+        await updateIntegration(integrations.id, cleanedUpdates);
       } else {
-        // Insert new record
-        const { error } = await supabase
-          .from("integrations")
-          .insert({
-            page_id: pageId,
-            ...cleanedUpdates,
-          });
-
-        if (error) throw error;
+        await createIntegration({ page_id: pageId, ...cleanedUpdates });
       }
     },
     onSuccess: () => {
@@ -147,12 +116,10 @@ export function useIntegrations() {
 
       return parsed.toString();
     } catch {
-      // If URL is invalid, return original
       return url;
     }
   };
 
-  // Check if UTM template is configured
   const hasUtmTemplate = !!(
     integrations?.utm_source ||
     integrations?.utm_medium ||

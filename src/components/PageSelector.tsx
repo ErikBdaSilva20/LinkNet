@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useActivePage } from "@/contexts/ActivePageContext";
-import { useProfile } from "@/hooks/useProfile";
 import { CreatePageModal } from "./CreatePageModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,19 +13,16 @@ import { ChevronDown, Check, Plus, FileText } from "lucide-react";
 
 export function PageSelector() {
   const { page, pages, setActivePage } = useActivePage();
-  const { profile } = useProfile();
   const [modalOpen, setModalOpen] = useState(false);
 
   const getPageDisplayName = (p: typeof page) => {
     if (!p) return "Selecionar página";
-    if (!p.slug) return p.title || "Página Principal";
-    return p.title || p.slug;
+    return p.title || p.handle;
   };
 
   const getPageUrl = (p: typeof page) => {
-    if (!p || !profile?.handle) return "";
-    if (!p.slug) return `/${profile.handle}`;
-    return `/${profile.handle}/${p.slug}`;
+    if (!p) return "";
+    return `/${p.handle}`;
   };
 
   return (
@@ -55,7 +51,7 @@ export function PageSelector() {
             >
               <div className="flex flex-col min-w-0">
                 <span className="font-medium truncate">
-                  {!p.slug ? (p.title || "Página Principal") : (p.title || p.slug)}
+                  {p.title || p.handle}
                 </span>
                 <span className="text-xs text-muted-foreground truncate">
                   {getPageUrl(p)}

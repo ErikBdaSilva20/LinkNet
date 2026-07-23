@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, Mail, ChevronDown } from "lucide-react";
 import type { FormField } from "@/components/LeadFormFieldsConfigurator";
+import { submitLead } from "@/lib/data/public.repo";
 
 interface LeadCaptureFormProps {
   pageId: string;
@@ -98,20 +99,7 @@ export function LeadCaptureForm({
         }
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture-lead`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao cadastrar");
-      }
+      await submitLead(payload as { page_id: string } & Record<string, unknown>);
 
       setSubmitted(true);
     } catch (err) {

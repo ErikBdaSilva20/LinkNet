@@ -11,7 +11,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
   Search,
-  Link,
   ChevronRight,
   Sparkles,
   Heart,
@@ -26,12 +25,10 @@ import {
 import { DynamicIcon } from "@/components/IconSelector";
 import {
   LINK_CATEGORIES,
-  LINK_TEMPLATES,
   QUICK_TYPES,
   detectPlatformFromUrl,
   getTemplatesByCategory,
   type LinkTemplate,
-  type LinkCategory,
 } from "@/data/linkTemplates";
 
 // Icon map for categories

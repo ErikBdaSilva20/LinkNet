@@ -1,0 +1,43 @@
+{
+  "id": "linkguild",
+  "name": "LinkGuild — Link-in-bio",
+  "description": "Página de bio com links personalizáveis, captura de leads, encurtador de links e analytics de cliques/visitas.",
+  "version": "1.0.0",
+  "engine": "vite-react-gateway",
+  "schemaVersion": 1,
+  "migrations": ["0001_business_schema.sql"],
+  "auth": { "provider": "better-auth", "roles": ["admin", "manager", "rep"] },
+  "screens": [
+    { "id": "home", "route": "/app", "title": "Home", "file": "src/screens/HomeScreen" },
+    { "id": "links", "route": "/app/links", "title": "Botões", "file": "src/screens/LinksScreen" },
+    { "id": "shortlinks", "route": "/app/shortlinks", "title": "Encurtador", "file": "src/screens/ShortLinksScreen" },
+    { "id": "form", "route": "/app/form", "title": "Formulário", "file": "src/screens/LeadFormScreen" },
+    { "id": "leads", "route": "/app/leads", "title": "Leads", "file": "src/screens/LeadsScreen" },
+    { "id": "design", "route": "/app/design", "title": "Design", "file": "src/screens/DesignScreen" },
+    { "id": "analytics", "route": "/app/analytics", "title": "Analytics", "file": "src/screens/AnalyticsScreen" },
+    { "id": "settings", "route": "/app/settings", "title": "Settings", "file": "src/screens/SettingsScreen" }
+  ],
+  "editable": {
+    "allow": [
+      "src/screens/**",
+      "src/components/**",
+      "src/lib/data/*.repo.ts",
+      "src/lib/format.ts",
+      "src/app.css"
+    ],
+    "protect": [
+      "src/lib/data/client.ts",
+      "src/lib/data/types.gen.ts",
+      "src/components/registry.tsx",
+      "src/main.tsx",
+      "supabase/migrations/**",
+      "src/components/ui/**",
+      "src/lib/utils.ts",
+      "vite.config.ts",
+      "components.json",
+      "src/lib/data/preview-fixtures.ts"
+    ]
+  },
+  "composio": { "toolkits": [] },
+  "envContract": ["VITE_GATEWAY_URL"]
+}

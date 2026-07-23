@@ -1,4 +1,4 @@
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/data/types.gen";
 
 type BackgroundType = Database["public"]["Enums"]["background_type"];
 

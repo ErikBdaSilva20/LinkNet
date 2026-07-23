@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Lockfiles de outros gerenciadores (canônico é npm/package-lock.json — §B10)
+bun.lock
+bun.lockb
+yarn.lock
+pnpm-lock.yaml
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

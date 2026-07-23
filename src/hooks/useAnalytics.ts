@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { useLinks, type Link } from "./useLinks";
+import { listPageViews, type PageView } from "@/lib/data/page_views.repo";
+import { listLinkClicks } from "@/lib/data/link_clicks.repo";
+import type { LinkClick } from "@/lib/data/link_clicks.repo";
 import { format, subDays, differenceInDays, startOfDay, endOfDay } from "date-fns";
-import type { Tables } from "@/integrations/supabase/types";
-
-type PageView = Tables<"page_views">;
-type LinkClick = Tables<"link_clicks">;
 
 export interface DailyStats {
   date: string;
@@ -17,7 +15,7 @@ export interface DailyStats {
 export interface TopLink {
   id: string;
   title: string;
-  url: string;
+  url: string | null;
   clicks: number;
 }
 
@@ -44,7 +42,7 @@ export interface AnalyticsData {
   previousCtr: number;
 }
 
-// Aggregation helpers
+// Aggregation helpers (puras — não mudam com a troca de fonte de dado)
 const aggregateDailyStats = (
   views: PageView[],
   clicks: LinkClick[],
@@ -53,7 +51,6 @@ const aggregateDailyStats = (
 ): DailyStats[] => {
   const stats: Record<string, { views: number; clicks: number }> = {};
 
-  // Initialize all days in the period
   const current = new Date(startDate);
   while (current <= endDate) {
     const key = format(current, "yyyy-MM-dd");
@@ -61,13 +58,11 @@ const aggregateDailyStats = (
     current.setDate(current.getDate() + 1);
   }
 
-  // Aggregate views
   views.forEach((v) => {
     const key = format(new Date(v.created_at), "yyyy-MM-dd");
     if (stats[key]) stats[key].views++;
   });
 
-  // Aggregate clicks
   clicks.forEach((c) => {
     const key = format(new Date(c.clicked_at), "yyyy-MM-dd");
     if (stats[key]) stats[key].clicks++;
@@ -131,6 +126,11 @@ const aggregateDevices = (views: PageView[]): DeviceStats[] => {
     .sort((a, b) => b.count - a.count);
 };
 
+const isWithin = (isoDate: string, start: Date, end: Date): boolean => {
+  const d = new Date(isoDate).getTime();
+  return d >= start.getTime() && d <= end.getTime();
+};
+
 interface UseAnalyticsOptions {
   startDate: Date;
   endDate: Date;
@@ -140,92 +140,47 @@ export function useAnalytics({ startDate, endDate }: UseAnalyticsOptions) {
   const { pageId } = useActivePage();
   const { links } = useLinks();
 
-  // Calculate previous period for comparison
   const periodDays = differenceInDays(endDate, startDate);
   const previousEndDate = subDays(startDate, 1);
   const previousStartDate = subDays(previousEndDate, periodDays);
 
-  // Fetch page views for current period
-  const { data: currentViews = [], isLoading: isLoadingViews } = useQuery({
-    queryKey: ["analytics-views", pageId, startDate.toISOString(), endDate.toISOString()],
+  // Escalabilidade (Bloco 4, Story 4.8): sem filtro/paginação server-side no modo genérico,
+  // então puxamos cada tabela UMA vez só e derivamos os dois períodos em memória — reduz de
+  // 4 chamadas de rede pra 2. staleTime alto porque analytics não precisa ser real-time.
+  const { data: allViews = [], isLoading: isLoadingViews } = useQuery({
+    queryKey: ["analytics-views", pageId],
     queryFn: async (): Promise<PageView[]> => {
       if (!pageId) return [];
-
-      const { data, error } = await supabase
-        .from("page_views")
-        .select("*")
-        .eq("page_id", pageId)
-        .gte("created_at", startOfDay(startDate).toISOString())
-        .lte("created_at", endOfDay(endDate).toISOString());
-
-      if (error) throw error;
-      return data || [];
+      const all = await listPageViews();
+      return all.filter((v) => v.page_id === pageId);
     },
     enabled: !!pageId,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch page views for previous period
-  const { data: previousViews = [] } = useQuery({
-    queryKey: ["analytics-views-prev", pageId, previousStartDate.toISOString(), previousEndDate.toISOString()],
-    queryFn: async (): Promise<PageView[]> => {
-      if (!pageId) return [];
+  const linkIds = new Set(links.map((l) => l.id));
 
-      const { data, error } = await supabase
-        .from("page_views")
-        .select("*")
-        .eq("page_id", pageId)
-        .gte("created_at", startOfDay(previousStartDate).toISOString())
-        .lte("created_at", endOfDay(previousEndDate).toISOString());
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!pageId,
-  });
-
-  // Fetch link clicks for current period
-  const { data: currentClicks = [], isLoading: isLoadingClicks } = useQuery({
-    queryKey: ["analytics-clicks", pageId, startDate.toISOString(), endDate.toISOString()],
+  const { data: allClicks = [], isLoading: isLoadingClicks } = useQuery({
+    queryKey: ["analytics-clicks", pageId, links.length],
     queryFn: async (): Promise<LinkClick[]> => {
       if (!pageId || links.length === 0) return [];
-
-      const linkIds = links.map((l) => l.id);
-
-      const { data, error } = await supabase
-        .from("link_clicks")
-        .select("*")
-        .in("link_id", linkIds)
-        .gte("clicked_at", startOfDay(startDate).toISOString())
-        .lte("clicked_at", endOfDay(endDate).toISOString());
-
-      if (error) throw error;
-      return data || [];
+      const all = await listLinkClicks();
+      return all.filter((c) => linkIds.has(c.link_id));
     },
     enabled: !!pageId && links.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch link clicks for previous period
-  const { data: previousClicks = [] } = useQuery({
-    queryKey: ["analytics-clicks-prev", pageId, previousStartDate.toISOString(), previousEndDate.toISOString()],
-    queryFn: async (): Promise<LinkClick[]> => {
-      if (!pageId || links.length === 0) return [];
+  const currentStart = startOfDay(startDate);
+  const currentEnd = endOfDay(endDate);
+  const previousStart = startOfDay(previousStartDate);
+  const previousEnd = endOfDay(previousEndDate);
 
-      const linkIds = links.map((l) => l.id);
+  const currentViews = allViews.filter((v) => isWithin(v.created_at, currentStart, currentEnd));
+  const previousViews = allViews.filter((v) => isWithin(v.created_at, previousStart, previousEnd));
+  const currentClicks = allClicks.filter((c) => isWithin(c.clicked_at, currentStart, currentEnd));
+  const previousClicks = allClicks.filter((c) => isWithin(c.clicked_at, previousStart, previousEnd));
 
-      const { data, error } = await supabase
-        .from("link_clicks")
-        .select("*")
-        .in("link_id", linkIds)
-        .gte("clicked_at", startOfDay(previousStartDate).toISOString())
-        .lte("clicked_at", endOfDay(previousEndDate).toISOString());
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!pageId && links.length > 0,
-  });
-
-  // Calculate metrics
   const totalViews = currentViews.length;
   const totalClicks = currentClicks.length;
   const ctr = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
@@ -234,7 +189,6 @@ export function useAnalytics({ startDate, endDate }: UseAnalyticsOptions) {
   const previousTotalClicks = previousClicks.length;
   const previousCtr = previousTotalViews > 0 ? (previousTotalClicks / previousTotalViews) * 100 : 0;
 
-  // Aggregate data
   const dailyStats = aggregateDailyStats(currentViews, currentClicks, startDate, endDate);
   const topLinks = aggregateTopLinks(currentClicks, links);
   const topReferrers = aggregateReferrers(currentViews);
