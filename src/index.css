@@ -1,0 +1,314 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System - Viver de IA
+   Cores principais: Cyan/Teal
+   Tema: Dark mode com glassmorphism
+*/
+
+@layer base {
+  :root {
+    /* Cyan/Teal - Cores principais */
+    --cyan-primary: 191 91% 43%;
+    --cyan-light: 187 79% 53%;
+    --teal-primary: 168 76% 40%;
+    --teal-light: 168 73% 50%;
+
+    /* Light Mode - Background claro */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    /* Cards brancos */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Primary usa Cyan (mais escuro para contraste) */
+    --primary: 187 79% 43%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary usa Teal */
+    --secondary: 168 76% 35%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 187 79% 43%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214.3 31.8% 85%;
+    --input: 214.3 31.8% 91%;
+    --ring: 187 79% 43%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 187 79% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 85%;
+    --sidebar-ring: 187 79% 43%;
+  }
+
+  .dark {
+    /* Cyan/Teal - Cores principais */
+    --cyan-primary: 191 91% 43%;
+    --cyan-light: 187 79% 53%;
+    --teal-primary: 168 76% 40%;
+    --teal-light: 168 73% 50%;
+
+    /* Dark Mode - Background escuro */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    /* Cards com glassmorphism */
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary usa Cyan */
+    --primary: 187 79% 53%;
+    --primary-foreground: 222.2 84% 4.9%;
+
+    /* Secondary usa Teal */
+    --secondary: 168 76% 40%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 187 79% 53%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 20%;
+    --ring: 187 79% 53%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 187 79% 53%;
+    --sidebar-primary-foreground: 222.2 84% 4.9%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 20%;
+    --sidebar-ring: 187 79% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+}
+
+/* Keyframes de animação */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(187 79% 53% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(187 79% 53% / 0.6);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-10px);
+  }
+  75% {
+    transform: translateY(-30px) translateX(5px);
+  }
+}
+
+@keyframes orbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+
+@layer utilities {
+  /* Classes de animação */
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out forwards;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.5s ease-out forwards;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-orb-float {
+    animation: orbFloat 20s ease-in-out infinite;
+  }
+
+  /* Delays de animação */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
+
+  /* Tech Grid Pattern */
+  .tech-grid {
+    background-image: 
+      linear-gradient(hsl(187 79% 53% / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(187 79% 53% / 0.3) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Gradientes reutilizáveis */
+  .gradient-primary {
+    background: linear-gradient(to right, hsl(187 79% 53%), hsl(168 76% 40%));
+  }
+
+  .gradient-primary-hover {
+    background: linear-gradient(to right, hsl(191 91% 43%), hsl(168 69% 35%));
+  }
+
+  .gradient-text {
+    background: linear-gradient(to right, hsl(187 79% 53%), hsl(168 73% 50%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    @apply rounded-3xl border-2 border-border/50 shadow-2xl bg-card/80 backdrop-blur-xl relative;
+  }
+
+  .glass-card-overlay {
+    @apply absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent rounded-3xl pointer-events-none;
+  }
+
+  /* Input estilizado */
+  .input-styled {
+    @apply rounded-xl border-2 border-border/50 bg-input/50 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 backdrop-blur-sm transition-all duration-300;
+  }
+
+  /* Focus ring customizado */
+  .focus-ring-primary {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  /* Hover scale */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  /* Link interativo */
+  .interactive-link {
+    @apply text-primary hover:text-primary/80 transition-colors duration-200;
+  }
+}
+
+/* Scrollbar customizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
