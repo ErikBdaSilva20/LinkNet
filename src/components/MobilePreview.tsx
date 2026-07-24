@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { FONT_OPTIONS, getButtonRadius } from "@/hooks/useTheme";
+import { getFontFamily, getButtonRadius } from "@/hooks/useTheme";
+import { getBackgroundStyle, getLinkButtonStyle } from "@/lib/publicPageStyle";
 import { SocialIconsBarPreview } from "@/components/SocialIconsBar";
 import type { Database } from "@/lib/data/types.gen";
 import type { FormField } from "@/lib/leadFormFields";
@@ -139,26 +140,14 @@ function LeadFormMiniPreview({
 }
 
 export function MobilePreview({ theme, profile, links, leadForm }: MobilePreviewProps) {
-  const backgroundStyle = useMemo(() => {
-    if (theme.background_type === "image" && theme.custom_background_url) {
-      return {
-        backgroundImage: `url(${theme.custom_background_url})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      };
-    }
-    if (theme.background_type === "gradient" && theme.background_value) {
-      return { background: theme.background_value };
-    }
-    return { backgroundColor: theme.background_value || "#0f172a" };
-  }, [theme.background_type, theme.background_value, theme.custom_background_url]);
+  const backgroundStyle = useMemo(() => getBackgroundStyle(theme), [theme]);
 
   const buttonRadius = useMemo(() => {
     return getButtonRadius(theme.button_style, theme.button_radius);
   }, [theme.button_style, theme.button_radius]);
 
   const fontFamily = useMemo(() => {
-    return FONT_OPTIONS.find(f => f.id === theme.font_family)?.family || FONT_OPTIONS[0].family;
+    return getFontFamily(theme.font_family);
   }, [theme.font_family]);
 
   const textColor = theme.text_color || "#ffffff";
@@ -250,12 +239,7 @@ export function MobilePreview({ theme, profile, links, leadForm }: MobilePreview
                   <div
                     key={link.id}
                     className="p-3 text-center font-medium border-2 transition-all cursor-pointer hover:scale-[1.02]"
-                    style={{
-                      borderRadius: buttonRadius,
-                      borderColor: `${accentColor}50`,
-                      backgroundColor: `${accentColor}15`,
-                      color: textColor,
-                    }}
+                    style={{ ...getLinkButtonStyle(accentColor, buttonRadius), color: textColor }}
                   >
                     {link.title}
                   </div>

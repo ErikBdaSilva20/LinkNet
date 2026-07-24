@@ -8,6 +8,7 @@ import { parseFormFields } from "@/lib/leadFormFields";
 import { SocialIconsBar } from "@/components/SocialIconsBar";
 import { usePublicProfile } from "@/hooks/usePublicProfile";
 import { getFontFamily, getButtonRadius } from "@/hooks/useTheme";
+import { getBackgroundStyle, getLinkButtonStyle } from "@/lib/publicPageStyle";
 import { ExternalLink, Loader2 } from "lucide-react";
 import type { Tables } from "@/lib/data/types.gen";
 
@@ -38,24 +39,8 @@ export default function PublicProfileScreen() {
       } as React.CSSProperties;
     }
 
-    // Build background style based on type
-    let backgroundStyle: React.CSSProperties = {};
-    
-    if (theme.background_type === "image" && theme.custom_background_url) {
-      backgroundStyle = {
-        backgroundImage: `url(${theme.custom_background_url})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      };
-    } else if (theme.background_type === "gradient" && theme.background_value) {
-      backgroundStyle = { background: theme.background_value };
-    } else {
-      backgroundStyle = { backgroundColor: theme.background_value || "#0f172a" };
-    }
-
     return {
-      ...backgroundStyle,
+      ...getBackgroundStyle(theme, { fixedAttachment: true }),
       color: theme.text_color || "#ffffff",
       "--accent-color": theme.accent_color || "#22d3ee",
       "--button-radius": getButtonRadius(theme.button_style, theme.button_radius),
@@ -252,11 +237,7 @@ export default function PublicProfileScreen() {
                   >
                     <div 
                       className="flex items-center gap-4 p-4 border-2 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]"
-                      style={{ 
-                        borderRadius: buttonRadius,
-                        borderColor: `${accentColor}40`,
-                        backgroundColor: `${accentColor}15`,
-                      }}
+                      style={getLinkButtonStyle(accentColor, buttonRadius)}
                     >
                       {/* Thumbnail/Icon */}
                       {link.thumbnail_type === "upload" && link.thumbnail_url ? (
