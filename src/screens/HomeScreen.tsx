@@ -1,17 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GlassCard } from "@/components/GlassCard";
 import { useAuth } from "@/lib/auth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useLinks } from "@/hooks/useLinks";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { Link2, Eye, MousePointerClick, TrendingUp, Plus, ExternalLink, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { subDays } from "date-fns";
+
+const STATS_WINDOW_DAYS = 30;
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+
+  const { links } = useLinks();
+
+  const { startDate, endDate } = useMemo(() => {
+    const endDate = new Date();
+    return { startDate: subDays(endDate, STATS_WINDOW_DAYS), endDate };
+  }, []);
+  const { data: analytics } = useAnalytics({ startDate, endDate });
 
   const handleCopyLink = async () => {
     if (!profile?.handle) return;
@@ -26,10 +39,10 @@ export default function HomeScreen() {
   };
 
   const stats = [
-    { label: "Total de Links", value: "0", icon: Link2, color: "text-primary" },
-    { label: "Views", value: "0", icon: Eye, color: "text-secondary" },
-    { label: "Cliques", value: "0", icon: MousePointerClick, color: "text-cyan-light" },
-    { label: "CTR", value: "0%", icon: TrendingUp, color: "text-teal-light" },
+    { label: "Total de Links", value: String(links.length), icon: Link2, color: "text-primary" },
+    { label: `Views (${STATS_WINDOW_DAYS}d)`, value: String(analytics.totalViews), icon: Eye, color: "text-secondary" },
+    { label: `Cliques (${STATS_WINDOW_DAYS}d)`, value: String(analytics.totalClicks), icon: MousePointerClick, color: "text-cyan-light" },
+    { label: `CTR (${STATS_WINDOW_DAYS}d)`, value: `${analytics.ctr.toFixed(1)}%`, icon: TrendingUp, color: "text-teal-light" },
   ];
 
   return (

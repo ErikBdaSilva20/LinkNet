@@ -265,7 +265,7 @@ export function MobilePreview({ theme, profile, links, leadForm }: MobilePreview
             {/* Footer */}
             <div className="text-center mt-8">
               <p className="text-xs opacity-50">
-                Powered by LinkBio
+                Powered by LinkGuild
               </p>
             </div>
           </div>

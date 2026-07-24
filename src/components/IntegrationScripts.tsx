@@ -66,7 +66,7 @@ export function IntegrationScripts({
 
     const n = (f.fbq = function (...args: unknown[]) {
       if (typeof n.callMethod === "function") {
-        n.callMethod.apply(n, args);
+        n.callMethod(...args);
       } else {
         n.queue.push(args);
       }

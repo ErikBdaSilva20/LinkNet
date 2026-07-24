@@ -343,7 +343,7 @@ export default function PublicProfileScreen() {
           <div className="text-center pt-8">
             <p className="text-xs opacity-50">
               Powered by{" "}
-              <span className="font-semibold" style={{ color: accentColor }}>LinkBio</span>
+              <span className="font-semibold" style={{ color: accentColor }}>LinkGuild</span>
             </p>
           </div>
         </div>

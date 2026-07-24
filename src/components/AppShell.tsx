@@ -49,7 +49,7 @@ export function AppShell() {
         >
           <Menu className="h-6 w-6 text-foreground" />
         </button>
-        <span className="text-lg font-bold gradient-text">LinkBio</span>
+        <span className="text-lg font-bold gradient-text">LinkGuild</span>
         <ThemeToggle />
       </header>
 
@@ -71,7 +71,7 @@ export function AppShell() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-border/50">
-            <span className="text-xl font-bold gradient-text">LinkBio</span>
+            <span className="text-xl font-bold gradient-text">LinkGuild</span>
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <button

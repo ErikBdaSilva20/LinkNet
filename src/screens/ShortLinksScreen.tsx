@@ -20,127 +20,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { QRCodeGenerator } from "@/components/QRCodeGenerator";
-import { useShortLinks, isValidSlug } from "@/hooks/useShortLinks";
-import { useProfile } from "@/hooks/useProfile";
-import { useActivePage } from "@/contexts/ActivePageContext";
-import { useToast } from "@/hooks/use-toast";
+import { QrCodeSection } from "@/components/QrCodeSection";
+import { useShortLinks } from "@/hooks/useShortLinks";
+import { useShortLinkForm } from "@/hooks/useShortLinkForm";
 import { cn } from "@/lib/utils";
-import {
-  Plus,
-  X,
-  Loader2,
-  Link2,
-  Copy,
-  RefreshCw,
-  Trash2,
-  QrCode,
-} from "lucide-react";
-import { useState, useCallback, useMemo } from "react";
-
-interface ShortLinkFormData {
-  slug: string;
-  destinationType: "url" | "link";
-  destinationUrl: string;
-  linkId: string;
-}
-
-const initialFormData: ShortLinkFormData = {
-  slug: "",
-  destinationType: "url",
-  destinationUrl: "",
-  linkId: "",
-};
+import { Plus, X, Loader2, Link2, Copy, RefreshCw, Trash2, QrCode } from "lucide-react";
+import { useCallback, useState } from "react";
 
 export default function ShortLinksScreen() {
-  const {
-    shortLinks,
-    clickCounts,
-    isLoading,
-    links,
-    createShortLink,
-    deleteShortLink,
-    isCreating,
-    generateUniqueSlug,
-    copyToClipboard,
-    baseUrl,
-  } = useShortLinks();
+  const { shortLinks, clickCounts, isLoading, links, deleteShortLink, copyToClipboard, baseUrl } =
+    useShortLinks();
+  const form = useShortLinkForm();
 
-  const { profile } = useProfile();
-  const { page } = useActivePage();
-  const { toast } = useToast();
-
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<ShortLinkFormData>(initialFormData);
-  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shortLinkToDelete, setShortLinkToDelete] = useState<string | null>(null);
-
-  // QR Code state
-  const [qrTarget, setQrTarget] = useState<string>("page");
-  const [qrCustomUrl, setQrCustomUrl] = useState("");
   const [showQr, setShowQr] = useState(false);
-
-  const qrUrl = useMemo(() => {
-    if (qrTarget === "custom") {
-      return qrCustomUrl.trim() || null;
-    }
-    const base = page?.custom_domain
-      ? `https://${page.custom_domain}`
-      : window.location.origin;
-    return profile?.handle ? `${base}/${profile.handle}` : null;
-  }, [qrTarget, qrCustomUrl, profile?.handle, page?.custom_domain]);
-
-  const handleGenerateSlug = useCallback(async () => {
-    setIsGeneratingSlug(true);
-    try {
-      const slug = await generateUniqueSlug();
-      setFormData((prev) => ({ ...prev, slug }));
-    } finally {
-      setIsGeneratingSlug(false);
-    }
-  }, [generateUniqueSlug]);
-
-  const resetForm = useCallback(() => {
-    setFormData(initialFormData);
-    setShowForm(false);
-  }, []);
-
-  const handleSubmit = useCallback(() => {
-    if (!formData.slug.trim()) {
-      toast({ variant: "destructive", title: "Slug obrigatório" });
-      return;
-    }
-    if (!isValidSlug(formData.slug)) {
-      toast({
-        variant: "destructive",
-        title: "Slug inválido",
-        description: "Use 3-20 caracteres alfanuméricos ou hífen",
-      });
-      return;
-    }
-
-    if (formData.destinationType === "url") {
-      if (!formData.destinationUrl.trim()) {
-        toast({ variant: "destructive", title: "URL de destino obrigatória" });
-        return;
-      }
-      createShortLink({
-        slug: formData.slug,
-        destination_url: formData.destinationUrl,
-      });
-    } else {
-      if (!formData.linkId) {
-        toast({ variant: "destructive", title: "Selecione um link" });
-        return;
-      }
-      createShortLink({
-        slug: formData.slug,
-        link_id: formData.linkId,
-      });
-    }
-    resetForm();
-  }, [formData, createShortLink, resetForm, toast]);
 
   const handleDeleteClick = useCallback((id: string) => {
     setShortLinkToDelete(id);
@@ -185,11 +79,7 @@ export default function ShortLinksScreen() {
               QR Code
             </Button>
             <Button
-              onClick={() => {
-                resetForm();
-                handleGenerateSlug();
-                setShowForm(true);
-              }}
+              onClick={form.openForm}
               className="gradient-primary text-primary-foreground rounded-xl"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -198,80 +88,14 @@ export default function ShortLinksScreen() {
           </div>
         </div>
 
-        {/* QR Code Section */}
-        {showQr && (
-          <GlassCard className="p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <QrCode className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold text-foreground">Gerar QR Code</h3>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowQr(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Selecionar destino</Label>
-                <Select value={qrTarget} onValueChange={setQrTarget}>
-                  <SelectTrigger className="input-styled">
-                    <SelectValue placeholder="Escolha o destino do QR" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="page">
-                      Minha Página (/{profile?.handle || "..."})
-                    </SelectItem>
-                    <SelectItem value="custom">Link personalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {qrTarget === "custom" && (
-                <div className="space-y-2">
-                  <Label htmlFor="qr-custom-url">URL personalizada</Label>
-                  <Input
-                    id="qr-custom-url"
-                    placeholder="https://..."
-                    value={qrCustomUrl}
-                    onChange={(e) => setQrCustomUrl(e.target.value)}
-                    className="input-styled"
-                  />
-                </div>
-              )}
-
-              {qrUrl ? (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                    <p className="text-sm text-muted-foreground mb-1">URL do QR Code:</p>
-                    <p className="text-sm font-mono text-foreground break-all">{qrUrl}</p>
-                  </div>
-                  <QRCodeGenerator
-                    value={qrUrl}
-                    size={200}
-                    label={qrTarget === "page" ? profile?.handle || "page" : qrTarget}
-                  />
-                </div>
-              ) : (
-                <div className="p-8 text-center rounded-xl bg-muted/30 border border-border/50">
-                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    {!profile?.handle
-                      ? "Configure seu handle nas configurações de perfil primeiro."
-                      : "Selecione um destino para gerar o QR Code."}
-                  </p>
-                </div>
-              )}
-            </div>
-          </GlassCard>
-        )}
+        {showQr && <QrCodeSection onClose={() => setShowQr(false)} />}
 
         {/* Create Form */}
-        {showForm && (
+        {form.showForm && (
           <GlassCard className="p-6 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Criar Link Curto</h3>
-              <Button variant="ghost" size="icon" onClick={resetForm}>
+              <Button variant="ghost" size="icon" onClick={form.resetForm}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -288,9 +112,9 @@ export default function ShortLinksScreen() {
                     <Input
                       id="short-slug"
                       placeholder="abc123"
-                      value={formData.slug}
+                      value={form.formData.slug}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, slug: e.target.value }))
+                        form.setFormData((prev) => ({ ...prev, slug: e.target.value }))
                       }
                       className="pl-9 input-styled"
                     />
@@ -298,17 +122,15 @@ export default function ShortLinksScreen() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleGenerateSlug}
-                    disabled={isGeneratingSlug}
+                    onClick={form.handleGenerateSlug}
+                    disabled={form.isGeneratingSlug}
                     title="Gerar novo slug"
                   >
-                    <RefreshCw
-                      className={cn("h-4 w-4", isGeneratingSlug && "animate-spin")}
-                    />
+                    <RefreshCw className={cn("h-4 w-4", form.isGeneratingSlug && "animate-spin")} />
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Preview: {baseUrl}{formData.slug || "..."}
+                  Preview: {baseUrl}{form.formData.slug || "..."}
                 </p>
               </div>
 
@@ -316,12 +138,9 @@ export default function ShortLinksScreen() {
               <div className="space-y-3">
                 <Label>Destino</Label>
                 <RadioGroup
-                  value={formData.destinationType}
+                  value={form.formData.destinationType}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      destinationType: value as "url" | "link",
-                    }))
+                    form.setFormData((prev) => ({ ...prev, destinationType: value as "url" | "link" }))
                   }
                   className="flex gap-4"
                 >
@@ -341,15 +160,15 @@ export default function ShortLinksScreen() {
               </div>
 
               {/* Destination URL */}
-              {formData.destinationType === "url" && (
+              {form.formData.destinationType === "url" && (
                 <div className="space-y-2">
                   <Label htmlFor="dest-url-input">URL de destino</Label>
                   <Input
                     id="dest-url-input"
                     placeholder="https://..."
-                    value={formData.destinationUrl}
+                    value={form.formData.destinationUrl}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, destinationUrl: e.target.value }))
+                      form.setFormData((prev) => ({ ...prev, destinationUrl: e.target.value }))
                     }
                     className="input-styled"
                   />
@@ -357,13 +176,13 @@ export default function ShortLinksScreen() {
               )}
 
               {/* Select Existing Link */}
-              {formData.destinationType === "link" && (
+              {form.formData.destinationType === "link" && (
                 <div className="space-y-2">
                   <Label>Selecionar link</Label>
                   <Select
-                    value={formData.linkId}
+                    value={form.formData.linkId}
                     onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, linkId: value }))
+                      form.setFormData((prev) => ({ ...prev, linkId: value }))
                     }
                   >
                     <SelectTrigger>
@@ -388,14 +207,14 @@ export default function ShortLinksScreen() {
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <Button
-                  onClick={handleSubmit}
-                  disabled={isCreating}
+                  onClick={form.handleSubmit}
+                  disabled={form.isCreating}
                   className="gradient-primary text-primary-foreground rounded-lg"
                 >
-                  {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {form.isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar
                 </Button>
-                <Button variant="outline" onClick={resetForm} className="rounded-lg">
+                <Button variant="outline" onClick={form.resetForm} className="rounded-lg">
                   Cancelar
                 </Button>
               </div>
@@ -408,7 +227,7 @@ export default function ShortLinksScreen() {
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : shortLinks.length === 0 && !showForm ? (
+        ) : shortLinks.length === 0 && !form.showForm ? (
           <GlassCard className="p-12">
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted mx-auto mb-4 flex items-center justify-center">
@@ -421,11 +240,7 @@ export default function ShortLinksScreen() {
                 Crie links curtos para rastrear cliques e gerar QR codes.
               </p>
               <Button
-                onClick={() => {
-                  resetForm();
-                  handleGenerateSlug();
-                  setShowForm(true);
-                }}
+                onClick={form.openForm}
                 className="gradient-primary text-primary-foreground rounded-xl"
               >
                 <Plus className="h-4 w-4 mr-2" />

@@ -118,9 +118,9 @@ const LandingScreen = () => {
       <footer className="border-t border-border/50 mt-20">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <span className="text-2xl font-bold gradient-text">LinkBio</span>
+            <span className="text-2xl font-bold gradient-text">LinkGuild</span>
             <p className="text-sm text-muted-foreground">
-              © 2024 Viver de IA. Todos os direitos reservados.
+              © 2026 LinkGuild. Todos os direitos reservados.
             </p>
           </div>
         </div>
