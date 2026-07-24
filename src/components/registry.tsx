@@ -17,7 +17,7 @@ export { MobilePreview } from "./MobilePreview";
 export { AddLinkModal } from "./AddLinkModal";
 export { CreatePageModal } from "./CreatePageModal";
 export { LeadCaptureForm } from "./LeadCaptureForm";
-export { LeadFormFieldsConfigurator, parseFormFields } from "./LeadFormFieldsConfigurator";
+export { LeadFormFieldsConfigurator } from "./LeadFormFieldsConfigurator";
 export { IntegrationScripts } from "./IntegrationScripts";
 export { SocialIconsBar } from "./SocialIconsBar";
 export { AnimatedBackground } from "./AnimatedBackground";

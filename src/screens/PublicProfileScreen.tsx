@@ -4,7 +4,7 @@ import { DynamicIcon } from "@/components/IconSelector";
 import { SEOHead } from "@/components/SEOHead";
 import { IntegrationScripts } from "@/components/IntegrationScripts";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
-import { parseFormFields } from "@/components/LeadFormFieldsConfigurator";
+import { parseFormFields } from "@/lib/leadFormFields";
 import { SocialIconsBar } from "@/components/SocialIconsBar";
 import { usePublicProfile } from "@/hooks/usePublicProfile";
 import { getFontFamily, getButtonRadius } from "@/hooks/useTheme";

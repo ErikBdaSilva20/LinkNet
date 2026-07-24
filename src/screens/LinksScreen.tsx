@@ -19,7 +19,7 @@ import { useLinks, type Link } from "@/hooks/useLinks";
 import { useLinkForm } from "@/hooks/useLinkForm";
 import { useTheme } from "@/hooks/useTheme";
 import { useProfile } from "@/hooks/useProfile";
-import { parseFormFields } from "@/components/LeadFormFieldsConfigurator";
+import { parseFormFields } from "@/lib/leadFormFields";
 import { Plus, ExternalLink, Loader2, Mail } from "lucide-react";
 import { useState, useCallback } from "react";
 

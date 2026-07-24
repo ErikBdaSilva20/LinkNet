@@ -1,0 +1,161 @@
+// Catálogo de ícones (lucide-react) disponíveis pro IconSelector — extraído de
+// IconSelector.tsx (era ~170 linhas de import/dado misturadas com a lógica do componente;
+// mesmo padrão de curatedThemes.ts/linkTemplates.ts, que já moram em src/data/).
+
+import {
+  // Social
+  Instagram,
+  Twitter,
+  Facebook,
+  Youtube,
+  Linkedin,
+  Github,
+  Twitch,
+  AtSign,
+  Hash,
+  // Communication
+  Mail,
+  Phone,
+  PhoneCall,
+  MessageCircle,
+  MessageCircleMore,
+  Send,
+  // Media
+  Music,
+  Music2,
+  Video,
+  Camera,
+  Image,
+  Podcast,
+  Radio,
+  Mic,
+  Play,
+  Headphones,
+  // Gaming
+  Gamepad2,
+  Joystick,
+  Trophy,
+  // Shopping
+  ShoppingBag,
+  Store,
+  CreditCard,
+  Gift,
+  Wallet,
+  DollarSign,
+  // General
+  Link,
+  Globe,
+  ExternalLink,
+  Heart,
+  Star,
+  Bookmark,
+  Pin,
+  Flame,
+  Crown,
+  BadgeCheck,
+  Sparkles,
+  // Productivity
+  Calendar,
+  CalendarDays,
+  Clock,
+  FileText,
+  File,
+  Download,
+  Briefcase,
+  TrendingUp,
+  // Others
+  MapPin,
+  Rss,
+  Zap,
+  Award,
+  Coffee,
+  User,
+  Users,
+  Share2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+// Static icon map - guaranteed to work
+export const ICON_MAP: Record<string, LucideIcon> = {
+  // Social
+  Instagram,
+  Twitter,
+  Facebook,
+  Youtube,
+  Linkedin,
+  Github,
+  Twitch,
+  AtSign,
+  Hash,
+  // Communication
+  Mail,
+  Phone,
+  PhoneCall,
+  MessageCircle,
+  MessageCircleMore,
+  Send,
+  // Media
+  Music,
+  Music2,
+  Video,
+  Camera,
+  Image,
+  Podcast,
+  Radio,
+  Mic,
+  Play,
+  Headphones,
+  // Gaming
+  Gamepad2,
+  Joystick,
+  Trophy,
+  // Shopping
+  ShoppingBag,
+  Store,
+  CreditCard,
+  Gift,
+  Wallet,
+  DollarSign,
+  // General
+  Link,
+  Globe,
+  ExternalLink,
+  Heart,
+  Star,
+  Bookmark,
+  Pin,
+  Flame,
+  Crown,
+  BadgeCheck,
+  Sparkles,
+  // Productivity
+  Calendar,
+  CalendarDays,
+  Clock,
+  FileText,
+  File,
+  Download,
+  Briefcase,
+  TrendingUp,
+  // Others
+  MapPin,
+  Rss,
+  Zap,
+  Award,
+  Coffee,
+  User,
+  Users,
+  Share2,
+};
+
+// Icon categories for organized display
+export const ICON_CATEGORIES: Record<string, string[]> = {
+  "Redes Sociais": ["Instagram", "Twitter", "Facebook", "Youtube", "Linkedin", "Github", "Twitch", "AtSign", "Hash"],
+  "Mensagens": ["Mail", "Phone", "PhoneCall", "MessageCircle", "MessageCircleMore", "Send"],
+  "Mídia": ["Music", "Music2", "Video", "Camera", "Image", "Podcast", "Radio", "Mic", "Play", "Headphones"],
+  "Gaming": ["Gamepad2", "Joystick", "Trophy"],
+  "Compras": ["ShoppingBag", "Store", "CreditCard", "Gift", "Wallet", "DollarSign"],
+  "Geral": ["Link", "Globe", "ExternalLink", "Heart", "Star", "Bookmark", "Pin", "Flame", "Crown", "BadgeCheck", "Sparkles"],
+  "Produtividade": ["Calendar", "Clock", "FileText", "File", "Download", "Briefcase", "TrendingUp"],
+  "Outros": ["MapPin", "Rss", "Zap", "Award", "Coffee", "User", "Share2"],
+};

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { FONT_OPTIONS, getButtonRadius } from "@/hooks/useTheme";
 import { SocialIconsBarPreview } from "@/components/SocialIconsBar";
 import type { Database } from "@/lib/data/types.gen";
+import type { FormField } from "@/lib/leadFormFields";
 
 type BackgroundType = Database["public"]["Enums"]["background_type"];
 
@@ -33,7 +34,7 @@ interface LeadFormData {
   enabled: boolean;
   title: string;
   description: string;
-  fields?: { id: string; type: string; label: string; enabled: boolean; required: boolean }[];
+  fields?: FormField[];
 }
 
 interface MobilePreviewProps {

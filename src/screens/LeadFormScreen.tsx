@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { Mail, Save, Loader2 } from "lucide-react";
-import { LeadFormFieldsConfigurator, parseFormFields, type FormField } from "@/components/LeadFormFieldsConfigurator";
+import { LeadFormFieldsConfigurator } from "@/components/LeadFormFieldsConfigurator";
+import { parseFormFields, type FormField } from "@/lib/leadFormFields";
 import { useActivePage } from "@/contexts/ActivePageContext";
 import { usePages } from "@/hooks/usePages";
 

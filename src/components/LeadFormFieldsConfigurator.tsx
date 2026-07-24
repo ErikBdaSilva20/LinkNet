@@ -25,38 +25,11 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
-export interface FormField {
-  id: string;
-  type: "text" | "email" | "phone" | "date";
-  label: string;
-  enabled: boolean;
-  required: boolean;
-}
-
-const DEFAULT_FIELDS: FormField[] = [
-  { id: "name", type: "text", label: "Nome", enabled: true, required: false },
-  { id: "email", type: "email", label: "E-mail", enabled: true, required: true },
-];
+import type { FormField } from "@/lib/leadFormFields";
 
 interface LeadFormFieldsConfiguratorProps {
   fields: FormField[];
   onChange: (fields: FormField[]) => void;
-}
-
-export function parseFormFields(raw: unknown): FormField[] {
-  if (!Array.isArray(raw)) return DEFAULT_FIELDS;
-  try {
-    return raw.map((f: Record<string, unknown>) => ({
-      id: String(f.id || crypto.randomUUID()),
-      type: (["text", "email", "phone", "date"].includes(f.type as string) ? f.type : "text") as FormField["type"],
-      label: String(f.label || ""),
-      enabled: Boolean(f.enabled),
-      required: Boolean(f.required),
-    }));
-  } catch {
-    return DEFAULT_FIELDS;
-  }
 }
 
 const typeLabels: Record<string, string> = {

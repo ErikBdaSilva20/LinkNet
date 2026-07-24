@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, Mail, ChevronDown } from "lucide-react";
-import type { FormField } from "@/components/LeadFormFieldsConfigurator";
+import type { FormField } from "@/lib/leadFormFields";
 import { submitLead } from "@/lib/data/public.repo";
 
 interface LeadCaptureFormProps {
