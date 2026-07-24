@@ -5,6 +5,28 @@
 > dados) + heurísticas de SRP/conexão/duplicação semântica. Achados ordenados por prioridade
 > (P0 = corrige logo, P3 = cosmético).
 
+## Status (atualizado 2026-07-23, mesmo dia — sessão de execução)
+
+Todos os achados P0/P1/P2/P3 foram atacados, exceto o item de código morto do `registry.tsx`
+(que precisa de confirmação externa, não é conserto de código) e os fast-refresh warnings de
+`ActivePageContext.tsx`/`lib/auth.tsx` (decisão consciente de não separar — ver nota no item).
+Commits na branch `dev`: `b9040ed`, `c472331`, `ad28d4d`, `fbe6c9e`.
+
+| Item | Status |
+|---|---|
+| P0.1 — Home stats hardcoded | ✅ Resolvido (`b9040ed`) |
+| P0.2 — Vazamento de marca | ✅ Resolvido (`b9040ed`) |
+| P1 — `as any[]` em LinksScreen | ✅ Resolvido (`b9040ed`) |
+| P1 — `.apply()`, `require()`, `useCallback` dep morta | ✅ Resolvido (`b9040ed`) |
+| P1 — empty-interface shadcn (`command.tsx`/`textarea.tsx`) | ⛔ Não mexido (ruído de vendor, decisão consciente) |
+| P1 — `registry.tsx` código morto | ❓ Ainda não confirmado (ver item abaixo) |
+| P1 — `tailwind.config.ts` globs mortos | ✅ Resolvido (`b9040ed`) |
+| P2 — LinksScreen/DesignScreen/ShortLinksScreen grandes | ✅ Resolvido (`b9040ed`) |
+| P2 — Duplicação PublicProfileScreen/MobilePreview | ✅ Resolvido (`ad28d4d`) |
+| P2 — Fast-refresh warnings | 🟡 Parcial — `LeadFormFieldsConfigurator`/`registry.tsx` resolvidos (`c472331`); `ActivePageContext`/`lib/auth.tsx` mantidos de propósito (padrão Provider+hook idiomático) |
+| P3 — Bundle sem code-split | ✅ Resolvido (`fbe6c9e`) |
+| P3 — `build` sem `tsc` | ✅ Resolvido (`fbe6c9e`) |
+
 ## P0 — Gaps funcionais (parece pronto, não está)
 
 ### 1. Dashboard Home mostra estatísticas fixas em "0"
